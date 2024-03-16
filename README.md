@@ -1,4 +1,4 @@
-# Argyle API Task (Java) #4
+# FIB API Task (Java) #4
 
 ## Build and run service locally with Docker
 
