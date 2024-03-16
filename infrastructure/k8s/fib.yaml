@@ -1,0 +1,79 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fib-calculator
+  labels:
+    app.kubernetes.io/name: fib-calculator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fib
+  template:
+    metadata:
+      labels:
+        app: fib
+    spec:
+      containers:
+        - name: fib-calculator
+          image: cosmosyst/fib-calculator
+          ports:
+            - containerPort: 8000
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8000
+              scheme: HTTP
+            timeoutSeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 2
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8000
+              scheme: HTTP
+            initialDelaySeconds: 15
+            timeoutSeconds: 10
+            periodSeconds: 10
+            failureThreshold: 4
+          resources:
+            requests:
+              memory: "400Mi"
+              cpu: "1.0"
+            limits:
+              memory: "600Mi"
+              cpu: "1.5"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fib-calculator-lb
+spec:
+  selector:
+    app: fib
+  type: LoadBalancer
+  ports:
+    - name: http
+      port: 8000       # external
+      targetPort: 8000 # internal
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: fib-autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: fib-calculator
+  minReplicas: 1
+  maxReplicas : 3
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
